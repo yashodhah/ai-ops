@@ -1,13 +1,17 @@
 {
   "name": "issue-investigator",
   "version": "1.0.0",
-  "description": "GitHub issue investigator agent using Flue",
+  "description": "GitHub issue investigator agent built with Flue Framework",
   "type": "module",
   "scripts": {
-    "run": "flue run src/agents/investigator.ts"
+    "install:flue": "npm install @flue/runtime @flue/cli",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@flue/runtime": "^0.1.0",
-    "just-bash": "^1.0.0"
+    "@flue/runtime": "latest",
+    "@flue/cli": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
   }
 }
