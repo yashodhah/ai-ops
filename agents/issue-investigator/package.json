@@ -1,0 +1,13 @@
+{
+  "name": "issue-investigator",
+  "version": "1.0.0",
+  "description": "GitHub issue investigator agent using Flue",
+  "type": "module",
+  "scripts": {
+    "run": "flue run src/agents/investigator.ts"
+  },
+  "dependencies": {
+    "@flue/runtime": "^0.1.0",
+    "just-bash": "^1.0.0"
+  }
+}
