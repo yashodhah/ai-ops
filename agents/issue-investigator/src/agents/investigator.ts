@@ -19,7 +19,7 @@ import { resolveRepository } from '../shared/repository.ts';
  *   flue run src/agents/investigator.ts --id issue-1 --message "Tell me more about X"
  */
 export function IssueInvestigator() {
-	useModel('openrouter/openai/gpt-4-turbo');
+	useModel('openai/gpt-oss-20b');
 	const repo = resolveRepository();
 	useSandbox(
 		bash(() => new Bash({ fs: new InMemoryFs(repo.snapshot('/repo')) })),
