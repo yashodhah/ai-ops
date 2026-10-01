@@ -39,22 +39,22 @@ runs:
         TITLE=$(jq -r '.title' $RUNNER_TEMP/issue.json)
         BODY=$(jq -r '.body // "No description provided"' $RUNNER_TEMP/issue.json)
         COMMENTS=$(jq -r '.comments | map(.body) | join("\n---\n")' $RUNNER_TEMP/issue.json)
-        
+
         # Combine and truncate to ~20,000 chars
         MESSAGE="Issue: $TITLE
-        
+
         $BODY"
-        
+
         if [ -n "$COMMENTS" ]; then
           MESSAGE="$MESSAGE
 
         Comments:
         $COMMENTS"
         fi
-        
+
         # Truncate to 20,000 chars
         MESSAGE="${MESSAGE:0:20000}"
-        
+
         # Save to file for safe passing (no shell interpolation)
         echo "$MESSAGE" > $RUNNER_TEMP/issue-message.txt
       working-directory: ${{ github.workspace }}
@@ -75,13 +75,21 @@ runs:
     - name: Extract and format report
       shell: bash
       run: |
-        # Extract the report from the JSON result
-        jq -r '.output' $RUNNER_TEMP/result.json > $RUNNER_TEMP/investigation-report.md
-        
-        # Also append to step summary
-        echo "## Investigation Report for Issue #${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        cat $RUNNER_TEMP/investigation-report.md >> $GITHUB_STEP_SUMMARY
+         # Extract the report from the JSON result, handle null/missing output
+         REPORT=$(jq -r '.output // empty' $RUNNER_TEMP/result.json)
+
+         if [ -z "$REPORT" ]; then
+           echo "ERROR: No report generated. Checking full result structure:" >&2
+           cat $RUNNER_TEMP/result.json >&2
+           echo "Investigation encountered an error or produced empty output" > $RUNNER_TEMP/investigation-report.md
+         else
+           echo "$REPORT" > $RUNNER_TEMP/investigation-report.md
+         fi
+
+         # Also append to step summary
+         echo "## Investigation Report for Issue #${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
+         echo "" >> $GITHUB_STEP_SUMMARY
+         cat $RUNNER_TEMP/investigation-report.md >> $GITHUB_STEP_SUMMARY
       working-directory: ${{ github.workspace }}
 
     - name: Upload report artifact
@@ -89,3 +97,30 @@ runs:
       with:
         name: investigation-report-${{ inputs.issue_number }}
         path: ${{ runner.temp }}/investigation-report.md
+        retention-days: 30
+
+    - name: Comment on issue with report link
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        ISSUE_NUMBER: ${{ inputs.issue_number }}
+      run: |
+         ARTIFACT_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+         COMMENT="## 📋 Investigation Report Ready
+
+         The AI issue investigator has analyzed this issue. You can:
+
+         - **View in workflow**: [See full report in GitHub Actions](${ARTIFACT_URL})
+         - **Download**: The investigation report is available as an artifact in the workflow run above
+
+         The report includes:
+         - Summary of the core issue
+         - Relevant files to examine
+         - Likely root cause analysis
+         - Suggested next steps for debugging/fixing
+
+         [Download Report Artifact](${ARTIFACT_URL}#artifacts)"
+
+         gh issue comment $ISSUE_NUMBER --body "$COMMENT"
+      working-directory: ${{ github.workspace }}

@@ -28,6 +28,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+
+      - name: Lint YAML files
+        run: |
+          cd agents/issue-investigator
+          npm install
+          npm run lint:yaml
+
       - name: Run Issue Investigator
         uses: ./github/issue-investigator
         env:

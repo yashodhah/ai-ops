@@ -6,14 +6,16 @@
   "scripts": {
     "install:flue": "npm install @flue/runtime @flue/cli",
     "type-check": "tsc --noEmit",
-    "test": "node --test src/**/*.test.ts"
+    "test": "node --test src/**/*.test.ts",
+    "lint:yaml": "yamllint ../../"
   },
   "dependencies": {
-    "@flue/runtime": "latest",
     "@flue/cli": "latest",
+    "@flue/runtime": "latest",
     "just-bash": "latest"
   },
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "yamllint-js": "^0.2.4"
   }
 }

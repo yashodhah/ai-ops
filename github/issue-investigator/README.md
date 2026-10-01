@@ -9,6 +9,8 @@ Analyze GitHub issues with AI and automatically generate investigation reports u
 - **Multi-turn Analysis**: Continue investigation across multiple workflow runs
 - **Markdown Reports**: Structured findings artifact for each issue
 - **GitHub Integration**: Works with issue webhooks, PR context, and GitHub API
+- **Downloadable Reports**: Investigation report available as workflow artifact with GitHub issue comment linking to it
+- **Robust Error Handling**: Gracefully handles null/missing report output with debugging info
 
 ## Quick Start
 
@@ -114,9 +116,15 @@ This ensures the model only analyzes your actual source code, not build artifact
    - Returns JSON with agent response
 
 5. **Extract Report**
-   - Parses agent JSON response
-   - Saves markdown report as artifact
-   - Appends to job summary for visibility
+    - Parses agent JSON response
+    - Saves markdown report as artifact
+    - Appends to job summary for visibility
+    - Handles null/missing output with fallback message
+
+6. **Comment on Issue**
+    - Posts investigation report link as issue comment
+    - Provides direct link to workflow artifacts for download
+    - Includes report sections summary (Summary, Relevant files, Root cause, Next steps)
 
 ### Data Flow
 
@@ -134,8 +142,14 @@ Flue Agent Analysis
 JSON Result ($RUNNER_TEMP/result.json)
     ↓
 Extract Report ($RUNNER_TEMP/investigation-report.md)
+    ├─ Handle null output gracefully
+    └─ Log debugging info on failure
     ↓
-Upload Artifact + Append Summary
+Upload Artifact (30-day retention)
+    ↓
+Comment on Issue with Download Link
+    ↓
+Append to Job Summary
 ```
 
 ---
@@ -257,6 +271,37 @@ npm test
 - [Just-Bash Virtual Sandbox](https://github.com/vercel-labs/just-bash)
 - [OpenRouter API](https://openrouter.ai/docs)
 - [Local Development Guide](../agents/issue-investigator/QUICK_START.md)
+
+---
+
+## Recent Changes
+
+### Bug Fix: Null Markdown Report Extraction
+
+**Issue:** Report markdown file was empty when agent output was null or missing.
+
+**Root Cause:** The `jq -r '.output'` extraction didn't handle cases where the output field was absent or null, resulting in empty reports.
+
+**Fix (v1.1.0):**
+- Changed extraction to `jq -r '.output // empty'` with null checking
+- Added fallback message when report is empty: "Investigation encountered an error or produced empty output"
+- Added debugging output to show full result structure on failure
+- Better error logging in GitHub Actions logs
+
+**Result:** Reports now always contain content—either the analysis or a clear error message explaining why generation failed.
+
+### Enhancement: Downloadable Reports with Issue Comments
+
+**Feature:** Investigation reports are now:
+1. **Automatically commented** on the GitHub issue with a formatted report link
+2. **Directly downloadable** from the workflow run artifacts (30-day retention)
+3. **Easily accessible** without needing to navigate GitHub Actions UI
+
+**How it works:**
+- After report generation, the action posts a comment to the issue
+- Comment includes link to workflow run artifacts
+- Artifact link makes the `.md` file directly downloadable
+- Job summary appends the full report text for quick viewing
 
 ---
 
