@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "install:flue": "npm install @flue/runtime @flue/cli",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "node --test src/**/*.test.ts"
   },
   "dependencies": {
     "@flue/runtime": "latest",
-    "@flue/cli": "latest"
+    "@flue/cli": "latest",
+    "just-bash": "latest"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

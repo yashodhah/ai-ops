@@ -1,6 +1,8 @@
 'use agent';
 
-import { useModel } from '@flue/runtime';
+import { bash, useModel, useSandbox } from '@flue/runtime';
+import { Bash, InMemoryFs } from 'just-bash';
+import { resolveRepository } from '../shared/repository.ts';
 
 /**
  * IssueInvestigator Agent
@@ -18,6 +20,11 @@ import { useModel } from '@flue/runtime';
  */
 export function IssueInvestigator() {
 	useModel('openrouter/openai/gpt-4-turbo');
+	const repo = resolveRepository();
+	useSandbox(
+		bash(() => new Bash({ fs: new InMemoryFs(repo.snapshot('/repo')) })),
+		{ cwd: '/repo' },
+	);
 	return `You are an expert code reviewer and GitHub issue investigator. Your task is to analyze issues and provide concise, actionable guidance.
 
 When analyzing an issue:
@@ -40,5 +47,7 @@ Your hypothesis for what's causing the issue in 2-3 sentences. Ground this in ac
 **Suggested next steps**
 3-5 concrete, actionable steps the developer can take to debug or fix the issue. Be specific about what to check and where.
 
-Be concise, precise, and grounded in the code patterns provided. Keep the tone professional and helpful.`;
+Be concise, precise, and grounded in the code patterns provided. Keep the tone professional and helpful.
+
+The repository is available read-only in your workspace at /repo. It is a copy: git-ignored files, binary files, files over 256 KB, and files beyond a 20 MB total budget are not present, so a missing file does not prove it does not exist in the repository.`;
 }

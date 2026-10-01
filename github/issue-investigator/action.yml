@@ -24,67 +24,68 @@ runs:
       working-directory: ${{ github.action_path }}/../../agents/issue-investigator
 
     - name: Fetch issue details
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.token }}
-        ISSUE_NUMBER: ${{ inputs.issue_number }}
-      run: |
-        gh issue view $ISSUE_NUMBER --json title,body,comments > issue.json
-      working-directory: ${{ github.workspace }}
+       shell: bash
+       env:
+         GH_TOKEN: ${{ inputs.token }}
+         ISSUE_NUMBER: ${{ inputs.issue_number }}
+       run: |
+         gh issue view $ISSUE_NUMBER --json title,body,comments > $RUNNER_TEMP/issue.json
+       working-directory: ${{ github.workspace }}
 
     - name: Prepare issue message
-      shell: bash
-      run: |
-        # Read issue JSON and build a formatted message
-        TITLE=$(jq -r '.title' issue.json)
-        BODY=$(jq -r '.body // "No description provided"' issue.json)
-        COMMENTS=$(jq -r '.comments | map(.body) | join("\n---\n")' issue.json)
-        
-        # Combine and truncate to ~20,000 chars
-        MESSAGE="Issue: $TITLE
-        
-        $BODY"
-        
-        if [ -n "$COMMENTS" ]; then
-          MESSAGE="$MESSAGE
+       shell: bash
+       run: |
+         # Read issue JSON and build a formatted message
+         TITLE=$(jq -r '.title' $RUNNER_TEMP/issue.json)
+         BODY=$(jq -r '.body // "No description provided"' $RUNNER_TEMP/issue.json)
+         COMMENTS=$(jq -r '.comments | map(.body) | join("\n---\n")' $RUNNER_TEMP/issue.json)
+         
+         # Combine and truncate to ~20,000 chars
+         MESSAGE="Issue: $TITLE
+         
+         $BODY"
+         
+         if [ -n "$COMMENTS" ]; then
+           MESSAGE="$MESSAGE
 
-        Comments:
-        $COMMENTS"
-        fi
-        
-        # Truncate to 20,000 chars
-        MESSAGE="${MESSAGE:0:20000}"
-        
-        # Save to file for safe passing (no shell interpolation)
-        echo "$MESSAGE" > issue-message.txt
-      working-directory: ${{ github.workspace }}
+         Comments:
+         $COMMENTS"
+         fi
+         
+         # Truncate to 20,000 chars
+         MESSAGE="${MESSAGE:0:20000}"
+         
+         # Save to file for safe passing (no shell interpolation)
+         echo "$MESSAGE" > $RUNNER_TEMP/issue-message.txt
+       working-directory: ${{ github.workspace }}
 
     - name: Run investigator agent
-      shell: bash
-      env:
-        OPENROUTER_API_KEY: ${{ env.OPENROUTER_API_KEY }}
-      run: |
-        npx flue run src/agents/investigator.ts \
-          --message "$(cat ${{ github.workspace }}/issue-message.txt)" \
-          --id issue-${{ inputs.issue_number }} \
-          --new \
-          --json > result.json
-      working-directory: ${{ github.action_path }}/../../agents/issue-investigator
+       shell: bash
+       env:
+         OPENROUTER_API_KEY: ${{ env.OPENROUTER_API_KEY }}
+         FLUE_REPO_ROOT: ${{ github.workspace }}
+       run: |
+         npx flue run src/agents/investigator.ts \
+           --message "$(cat $RUNNER_TEMP/issue-message.txt)" \
+           --id issue-${{ inputs.issue_number }} \
+           --new \
+           --json > $RUNNER_TEMP/result.json
+       working-directory: ${{ github.action_path }}/../../agents/issue-investigator
 
     - name: Extract and format report
-      shell: bash
-      run: |
-        # Extract the report from the JSON result
-        jq -r '.output' result.json > investigation-report.md
-        
-        # Also append to step summary
-        echo "## Investigation Report for Issue #${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        cat investigation-report.md >> $GITHUB_STEP_SUMMARY
-      working-directory: ${{ github.workspace }}
+       shell: bash
+       run: |
+         # Extract the report from the JSON result
+         jq -r '.output' $RUNNER_TEMP/result.json > $RUNNER_TEMP/investigation-report.md
+         
+         # Also append to step summary
+         echo "## Investigation Report for Issue #${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
+         echo "" >> $GITHUB_STEP_SUMMARY
+         cat $RUNNER_TEMP/investigation-report.md >> $GITHUB_STEP_SUMMARY
+       working-directory: ${{ github.workspace }}
 
     - name: Upload report artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: investigation-report-${{ inputs.issue_number }}
-        path: investigation-report.md
+       uses: actions/upload-artifact@v4
+       with:
+         name: investigation-report-${{ inputs.issue_number }}
+         path: ${{ runner.temp }}/investigation-report.md
