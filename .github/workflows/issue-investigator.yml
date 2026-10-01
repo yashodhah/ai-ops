@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-      issues: read
+      issues: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
